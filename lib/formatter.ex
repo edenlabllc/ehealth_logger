@@ -14,7 +14,7 @@ defmodule EhealthLogger.Formatter do
         %{
           time: format_timestamp(ts),
           severity: unquote(gcp_level),
-          log: IO.iodata_to_binary(msg)
+          log: IO.iodata_to_binary(format_msg(msg))
         },
         format_metadata(md, md_keys)
       )
@@ -30,6 +30,9 @@ defmodule EhealthLogger.Formatter do
       },
       format_metadata(md, md_keys)
     )
+  end
+
+  defp format_msg(["QUERY", _, _, _, [32, "db", 61, '0.0', 109, 115], [], [], 10, "commit", 32, "[]"]) do
   end
 
   defp format_metadata(md, md_keys) do
