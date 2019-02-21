@@ -70,6 +70,10 @@ defmodule EhealthLogger.Formatter do
     Exception.format(:error, exception, stacktrace)
   end
 
+  defp format_crash_reason({exception, stacktrace}) do
+    Exception.format(:error, exception, stacktrace)
+  end
+
   # RFC3339 UTC "Zulu" format
   defp format_timestamp({date, time}) do
     [format_date(date), format_time(time)]
