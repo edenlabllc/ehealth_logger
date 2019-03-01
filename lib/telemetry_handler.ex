@@ -11,7 +11,7 @@ if Code.ensure_loaded?(Ecto) do
       end
     end
 
-    defp set_metadata(pid) do
+    def set_metadata(pid) do
       case Keyword.get(Process.info(pid), :dictionary) do
         nil ->
           :ok
