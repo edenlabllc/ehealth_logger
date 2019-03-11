@@ -3,8 +3,9 @@ if Code.ensure_loaded?(Ecto) do
     defmacro __using__(opts) do
       quote do
         @prefix Keyword.get(unquote(opts), :prefix)
+        @repo Keyword.get(unquote(opts), :repo, :repo)
 
-        def handle_event([@prefix, :repo, :query], time, entry, config) do
+        def handle_event([@prefix, @repo, :query], time, entry, config) do
           EhealthLogger.TelemetryHandler.set_metadata(self())
           EhealthLogger.Ecto.log(entry, :info)
         end
