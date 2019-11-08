@@ -15,16 +15,27 @@ if Code.ensure_loaded?(Plug) do
       client_version_header = Keyword.get(opts, :version_header, "x-api-version")
       metadata_formatter = Keyword.get(opts, :metadata_formatter, MetadataFormatter)
       exclude_routes = Keyword.get(opts, :exclude_routes, [])
-      {level, metadata_formatter, exclude_routes, client_version_header}
+      include_variables = Keyword.get(opts, :include_variables, ["id"])
+
+      {level, metadata_formatter, exclude_routes, include_variables, client_version_header}
     end
 
     @impl true
-    def call(conn, {level, metadata_formatter, exclude_routes, client_version_header}) do
+    def call(conn, {level, metadata_formatter, exclude_routes, include_variables, client_version_header}) do
       start = System.monotonic_time()
 
       Conn.register_before_send(conn, fn conn ->
         latency = System.monotonic_time() - start
-        metadata = metadata_formatter.build_metadata(conn, latency, exclude_routes, client_version_header)
+
+        metadata =
+          metadata_formatter.build_metadata(
+            conn,
+            latency,
+            exclude_routes,
+            include_variables,
+            client_version_header
+          )
+
         Logger.log(level, "", metadata)
         conn
       end)
