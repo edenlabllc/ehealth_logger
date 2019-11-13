@@ -7,6 +7,8 @@ if Code.ensure_loaded?(Plug) do
       * `client.api_version` - version of API that was requested by a client;
       * `phoenix.controller` - Phoenix controller that processed the request;
       * `phoenix.action` - Phoenix action that processed the request;
+      * `absinthe.operation_name` - Name of the executed GraphQL operation;
+      * `absinthe.variables` - Variables that was passed to GraphQL operation;
       * `node.hostname` - node hostname;
       * `node.pid` - Erlang VM process identifier.
     """
@@ -15,7 +17,15 @@ if Code.ensure_loaded?(Plug) do
     @nanoseconds_in_second System.convert_time_unit(1, :second, :nanosecond)
 
     @doc false
-    def build_metadata(conn, latency, exclude_routes, client_version_header) do
+    def build_metadata(conn, latency, exclude_routes, include_variables, client_version_header) do
+      request_metadata(conn, latency, exclude_routes) ++
+      client_metadata(conn, client_version_header) ++
+      phoenix_metadata(conn) ++
+      absinthe_metadata(conn, include_variables) ++
+      node_metadata()
+    end
+
+    defp request_metadata(conn, latency, exclude_routes) do
       latency_seconds = native_to_seconds(latency)
 
       [
@@ -29,7 +39,7 @@ if Code.ensure_loaded?(Plug) do
             referer: LoggerJSON.Plug.get_header(conn, "referer"),
             latency: latency_seconds
           )
-      ] ++ client_metadata(conn, client_version_header) ++ phoenix_metadata(conn) ++ node_metadata()
+      ]
     end
 
     defp native_to_seconds(nil) do
@@ -70,6 +80,18 @@ if Code.ensure_loaded?(Plug) do
     defp phoenix_metadata(_conn) do
       []
     end
+
+    if Code.ensure_loaded?(Absinthe) do
+      alias EhealthLogger.Absinthe.Metadata
+
+      @absinthe_metadata_key Metadata.conn_key()
+
+      defp absinthe_metadata(%{private: %{@absinthe_metadata_key => metadata}} = conn, include_variables) do
+        [absinthe: Metadata.filter_variables(metadata, include_variables)]
+      end
+    end
+
+    defp absinthe_metadata(conn, _), do: []
 
     defp node_metadata do
       {:ok, hostname} = :inet.gethostname()
