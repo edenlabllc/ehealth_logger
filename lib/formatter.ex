@@ -4,6 +4,8 @@ defmodule EhealthLogger.Formatter do
   """
   import Jason.Helpers, only: [json_map: 1]
 
+  alias LoggerJSON.JasonSafeFormatter
+
   @behaviour LoggerJSON.Formatter
   @processed_metadata_keys ~w(pid file line function module application)a
   @severity_levels [{:debug, "DEBUG"}, {:info, "INFO"}, {:warn, "WARNING"}, {:error, "ERROR"}]
@@ -37,6 +39,7 @@ defmodule EhealthLogger.Formatter do
     |> LoggerJSON.take_metadata(md_keys, @processed_metadata_keys)
     |> maybe_put(:error, format_process_crash(md))
     |> maybe_put(:sourceLocation, format_source_location(md))
+    |> JasonSafeFormatter.format()
   end
 
   defp maybe_put(map, _key, nil), do: map
