@@ -17,18 +17,22 @@ if Code.ensure_loaded?(Ecto) do
     require Logger
     alias Ecto.UUID
 
+    @ignoring_queries ~w(begin commit rollback)
+
     @doc """
     Logs query string with metadata from `Ecto.LogEntry` in with debug level.
     """
-    @spec log(entry :: Ecto.LogEntry.t()) :: Ecto.LogEntry.t()
-    def log(entry) do
-      {query, metadata} = query_and_metadata(entry)
+    @spec log(measurements :: map(), metadata :: map()) :: map()
+    def log(_, %{query: query} = metadata) when query in @ignoring_queries, do: metadata
+
+    def log(measurements, metadata) do
+      {query, metadata} = build_telemetry_log(measurements, metadata)
 
       # The logger call will be removed at compile time if
       # `compile_time_purge_level` is set to higher than debug.
       Logger.debug(query, metadata)
 
-      entry
+      metadata
     end
 
     @doc """
@@ -36,27 +40,23 @@ if Code.ensure_loaded?(Ecto) do
 
     Logs the given entry in the given level.
     """
-    @spec log(entry :: Ecto.LogEntry.t(), level :: Logger.level()) :: Ecto.LogEntry.t()
-    def log(entry, level) do
-      {query, metadata} = query_and_metadata(entry)
+    @spec log(measurements :: map(), metadata :: map(), level :: Logger.level()) :: map()
+    def log(_, %{query: query} = metadata, _) when query in @ignoring_queries, do: metadata
+
+    def log(measurements, metadata, level) do
+      {query, metadata} = build_telemetry_log(measurements, metadata)
 
       # The logger call will not be removed at compile time,
       # because we use level as a variable
       Logger.log(level, query, metadata)
 
-      entry
+      metadata
     end
 
-    defp query_and_metadata(%{
-           query: query,
-           params: params,
-           query_time: query_time,
-           decode_time: decode_time,
-           queue_time: queue_time
-         }) do
-      query_time = format_time(query_time)
-      decode_time = format_time(decode_time)
-      queue_time = format_time(queue_time)
+    defp build_telemetry_log(measurements, %{query: query, params: params}) do
+      query_time = get_time(measurements, :query_time)
+      decode_time = get_time(measurements, :decode_time)
+      queue_time = get_time(measurements, :queue_time)
       params = format_params(params)
 
       metadata = [
@@ -70,6 +70,12 @@ if Code.ensure_loaded?(Ecto) do
       ]
 
       {query, metadata}
+    end
+
+    defp get_time(measurements, key) do
+      measurements
+      |> Map.get(key)
+      |> format_time()
     end
 
     defp format_time(nil), do: 0
