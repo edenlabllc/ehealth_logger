@@ -14,18 +14,20 @@ if Code.ensure_loaded?(Ecto) do
     For more information see [LogEntry](https://github.com/elixir-ecto/ecto/blob/master/lib/ecto/log_entry.ex)
     source code.
     """
-    require Logger
-    alias Ecto.UUID
+    import EhealthLogger.Config
 
-    @ignoring_queries ~w(begin commit rollback)
+    require Logger
+
+    alias Ecto.UUID
 
     @doc """
     Logs query string with metadata from `Ecto.LogEntry` in with debug level.
     """
     @spec log(measurements :: map(), metadata :: map()) :: map()
-    def log(_, %{query: query} = metadata) when query in @ignoring_queries, do: metadata
+    def log(measurements, %{query: query} = metadata),
+      do: if(Enum.member?(ignoring_queries(), query), do: metadata, else: do_log(measurements, metadata))
 
-    def log(measurements, metadata) do
+    defp do_log(measurements, metadata) do
       {query, metadata} = build_telemetry_log(measurements, metadata)
 
       # The logger call will be removed at compile time if
@@ -41,9 +43,10 @@ if Code.ensure_loaded?(Ecto) do
     Logs the given entry in the given level.
     """
     @spec log(measurements :: map(), metadata :: map(), level :: Logger.level()) :: map()
-    def log(_, %{query: query} = metadata, _) when query in @ignoring_queries, do: metadata
+    def log(measurements, %{query: query} = metadata, level),
+      do: if(Enum.member?(ignoring_queries(), query), do: metadata, else: do_log(measurements, metadata, level))
 
-    def log(measurements, metadata, level) do
+    defp do_log(measurements, metadata, level) do
       {query, metadata} = build_telemetry_log(measurements, metadata)
 
       # The logger call will not be removed at compile time,
