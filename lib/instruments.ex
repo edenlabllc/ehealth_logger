@@ -3,6 +3,7 @@ defmodule LoggerJSON.Phoenix.Instruments do
 
   require Logger
 
+  @deprecated "Phoenix.Instruments are removed since 1.5.0 version"
   def phoenix_error_render(:start, _compile, %{log_level: false}), do: :ok
 
   def phoenix_error_render(:start, _, %{log_level: level} = runtime) do
