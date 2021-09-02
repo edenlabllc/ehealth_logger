@@ -34,9 +34,9 @@ if Code.ensure_loaded?(Plug) do
             requestMethod: conn.method,
             requestUrl: request_url(conn, exclude_routes),
             status: conn.status,
-            userAgent: LoggerJSON.Plug.get_header(conn, "user-agent"),
+            userAgent: LoggerJSON.PlugUtils.get_header(conn, "user-agent"),
             remoteIp: remote_ip(conn),
-            referer: LoggerJSON.Plug.get_header(conn, "referer"),
+            referer: LoggerJSON.PlugUtils.get_header(conn, "referer"),
             latency: latency_seconds
           )
       ]
@@ -62,11 +62,11 @@ if Code.ensure_loaded?(Plug) do
     end
 
     defp remote_ip(conn) do
-      LoggerJSON.Plug.get_header(conn, "x-forwarded-for") || to_string(:inet_parse.ntoa(conn.remote_ip))
+      LoggerJSON.PlugUtils.get_header(conn, "x-forwarded-for") || to_string(:inet_parse.ntoa(conn.remote_ip))
     end
 
     defp client_metadata(conn, client_version_header) do
-      if api_version = LoggerJSON.Plug.get_header(conn, client_version_header) do
+      if api_version = LoggerJSON.PlugUtils.get_header(conn, client_version_header) do
         [client: json_map(api_version: api_version)]
       else
         []
