@@ -1,5 +1,8 @@
 defmodule EhealthLogger.Phoenix.TelemetryHandler do
-  @moduledoc false
+  @moduledoc """
+  Log level is taken from endpoint configuration from the configuration of `render_errors`. The conf key is `level`.
+  Default value is `debug`, so by default these logs are ignored in prod env.
+  """
 
   require Logger
 
