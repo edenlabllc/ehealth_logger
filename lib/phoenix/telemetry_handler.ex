@@ -5,8 +5,8 @@ defmodule EhealthLogger.Phoenix.TelemetryHandler do
 
   def handle_event(_, _, %{log: false}, _), do: :ok
 
-  def handle_event([:phoenix, :error_rendered], _, %{reason: reason, stacktrace: stack}, _) do
-    Logger.log(Logger.level(), "#{inspect(reason)}, #{inspect(stack)}")
+  def handle_event([:phoenix, :error_rendered], _, %{reason: reason, stacktrace: stack, kind: level}, _) do
+    Logger.log(level, "#{inspect(reason)}, #{inspect(stack)}")
     :ok
   end
 end
