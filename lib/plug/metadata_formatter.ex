@@ -19,10 +19,10 @@ if Code.ensure_loaded?(Plug) do
     @doc false
     def build_metadata(conn, latency, exclude_routes, include_variables, client_version_header) do
       request_metadata(conn, latency, exclude_routes) ++
-      client_metadata(conn, client_version_header) ++
-      phoenix_metadata(conn) ++
-      absinthe_metadata(conn, include_variables) ++
-      node_metadata()
+        client_metadata(conn, client_version_header) ++
+        phoenix_metadata(conn) ++
+        absinthe_metadata(conn, include_variables) ++
+        node_metadata()
     end
 
     defp request_metadata(conn, latency, exclude_routes) do
