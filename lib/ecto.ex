@@ -81,39 +81,37 @@ if Code.ensure_loaded?(Ecto) do
       |> format_time()
     end
 
-    defp format_time(nil), do: 0
-    defp format_time(time), do: System.convert_time_unit(time, :native, :microsecond)
+    defp format_time(nil),
+      do: 0
 
-    defp format_params(params) do
-      Enum.map(params, &param_to_string/1)
-    end
+    defp format_time(time),
+      do: System.convert_time_unit(time, :native, :microsecond)
+
+    defp format_params(params),
+      do: Enum.map(params, &param_to_string/1)
 
     ## Helpers
 
-    defp param_to_string({{_, _, _} = date, {h, m, s, _}}) do
-      NaiveDateTime.from_erl!({date, {h, m, s}})
-    end
+    defp param_to_string({{_, _, _} = date, {h, m, s, _}}),
+      do: NaiveDateTime.from_erl!({date, {h, m, s}})
 
-    defp param_to_string({_, _, _} = date) do
-      Date.from_erl!(date)
-    end
+    defp param_to_string({_, _, _} = date),
+      do: Date.from_erl!(date)
 
-    defp param_to_string(value) when is_list(value) do
-      Enum.map(value, &param_to_string/1)
-    end
-
-    defp param_to_string(value) when is_map(value) do
-      inspect(value)
-    end
+    defp param_to_string(value) when is_list(value),
+      do: Enum.map(value, &param_to_string/1)
 
     defp param_to_string(value) do
-      if String.valid?(value) do
-        value
-      else
-        case UUID.load(value) do
-          {:ok, uuid} -> uuid
-          _ -> inspect(value)
-        end
+      case UUID.load(value) do
+        {:ok, uuid} ->
+          uuid
+
+        _ ->
+          if is_binary(value) do
+            value
+          else
+            inspect(value)
+          end
       end
     end
   end
