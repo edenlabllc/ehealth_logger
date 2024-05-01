@@ -102,16 +102,13 @@ if Code.ensure_loaded?(Ecto) do
       do: Enum.map(value, &param_to_string/1)
 
     defp param_to_string(value) do
-      case UUID.load(value) do
-        {:ok, uuid} ->
-          uuid
-
-        _ ->
-          if is_binary(value) do
-            value
-          else
-            inspect(value)
-          end
+      if is_binary(value) and String.valid?(value) do
+        value
+      else
+        case UUID.load(value) do
+          {:ok, uuid} -> uuid
+          _ -> inspect(value)
+        end
       end
     end
   end
