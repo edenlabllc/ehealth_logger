@@ -21,7 +21,7 @@ defmodule EhealthLogger.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:logger_json, "~> 4.3"}
+      {:logger_json, "~> 6.2"}
     ]
   end
 end

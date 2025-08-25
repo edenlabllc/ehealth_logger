@@ -1,55 +1,73 @@
 defmodule EhealthLogger.Formatter do
   @moduledoc """
-  Custom logger formatter.
+  EHealth logger formatter.
   """
-  import Jason.Helpers, only: [json_map: 1]
 
-  alias LoggerJSON.JasonSafeFormatter
+  import LoggerJSON.Formatter.{MapBuilder, DateTime, Message, Metadata, RedactorEncoder}
+  require Jason.Helpers
 
   @behaviour LoggerJSON.Formatter
-  @processed_metadata_keys ~w(pid file line function module application)a
-  @severity_levels [{:debug, "DEBUG"}, {:info, "INFO"}, {:warn, "WARNING"}, {:error, "ERROR"}]
 
-  for {level, gcp_level} <- @severity_levels do
-    def format_event(unquote(level), msg, ts, md, md_keys) do
-      Map.merge(
-        %{
-          time: format_timestamp(ts),
-          severity: unquote(gcp_level),
-          log: IO.iodata_to_binary(msg)
-        },
-        format_metadata(md, md_keys)
-      )
-    end
+  @processed_metadata_keys ~w(pid file line function module application)a
+
+  @impl true
+  def format(%{level: level, meta: meta, msg: msg}, opts) do
+    opts = Keyword.new(opts)
+    encoder_opts = Keyword.get(opts, :encoder_opts, [])
+    metadata_keys_or_selector = Keyword.get(opts, :metadata, [])
+    metadata_selector = update_metadata_selector(metadata_keys_or_selector, @processed_metadata_keys)
+    redactors = Keyword.get(opts, :redactors, [])
+
+    message =
+      format_message(msg, meta, %{
+        binary: &format_binary_message/1,
+        structured: &format_structured_message/1,
+        crash: &format_crash_reason(&1, &2, meta)
+      })
+
+    line =
+      %{
+        time: utc_time(meta),
+        severity: Atom.to_string(level),
+        log: encode(message, redactors)
+      }
+      |> Map.merge(format_metadata(meta, metadata_selector))
+      |> Jason.encode_to_iodata!(encoder_opts)
+
+    [line, "\n"]
   end
 
-  def format_event(_level, msg, ts, md, md_keys) do
-    Map.merge(
-      %{
-        time: format_timestamp(ts),
-        severity: "DEFAULT",
-        log: IO.iodata_to_binary(msg)
-      },
-      format_metadata(md, md_keys)
-    )
+  @doc false
+  def format_binary_message(binary) do
+    IO.chardata_to_string(binary)
+  end
+
+  @doc false
+  def format_structured_message(map) when is_map(map) do
+    map
+  end
+
+  def format_structured_message(keyword) do
+    Enum.into(keyword, %{})
+  end
+
+  @doc false
+  def format_crash_reason(binary, _reason, _meta) do
+    IO.chardata_to_string(binary)
   end
 
   defp format_metadata(md, md_keys) do
     md
-    |> LoggerJSON.take_metadata(md_keys, @processed_metadata_keys)
+    |> take_metadata(md_keys)
     |> maybe_put(:error, format_process_crash(md))
     |> maybe_put(:sourceLocation, format_source_location(md))
-    |> JasonSafeFormatter.format()
   end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp format_process_crash(md) do
     if crash_reason = Keyword.get(md, :crash_reason) do
       initial_call = Keyword.get(md, :initial_call)
 
-      json_map(
+      Jason.Helpers.json_map(
         initial_call: format_initial_call(initial_call),
         reason: format_crash_reason(crash_reason)
       )
@@ -77,14 +95,6 @@ defmodule EhealthLogger.Formatter do
     Exception.format(:error, exception, stacktrace)
   end
 
-  # RFC3339 UTC "Zulu" format
-  defp format_timestamp({date, time}) do
-    [format_date(date), format_time(time)]
-    |> Enum.map(&IO.iodata_to_binary/1)
-    |> Enum.join("T")
-    |> Kernel.<>("Z")
-  end
-
   # Description can be found in Google Cloud Logger docs;
   # https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogEntrySourceLocation
   defp format_source_location(metadata) do
@@ -93,7 +103,7 @@ defmodule EhealthLogger.Formatter do
     function = Keyword.get(metadata, :function)
     module = Keyword.get(metadata, :module)
 
-    json_map(
+    Jason.Helpers.json_map(
       file: file,
       line: line,
       function: format_function(module, function)
@@ -103,19 +113,4 @@ defmodule EhealthLogger.Formatter do
   defp format_function(nil, function), do: function
   defp format_function(module, function), do: "#{module}.#{function}"
   defp format_function(module, function, arity), do: "#{module}.#{function}/#{arity}"
-
-  defp format_time({hh, mi, ss, ms}) do
-    [pad2(hh), ?:, pad2(mi), ?:, pad2(ss), ?., pad3(ms)]
-  end
-
-  defp format_date({yy, mm, dd}) do
-    [Integer.to_string(yy), ?-, pad2(mm), ?-, pad2(dd)]
-  end
-
-  defp pad3(int) when int < 10, do: [?0, ?0, Integer.to_string(int)]
-  defp pad3(int) when int < 100, do: [?0, Integer.to_string(int)]
-  defp pad3(int), do: Integer.to_string(int)
-
-  defp pad2(int) when int < 10, do: [?0, Integer.to_string(int)]
-  defp pad2(int), do: Integer.to_string(int)
 end
