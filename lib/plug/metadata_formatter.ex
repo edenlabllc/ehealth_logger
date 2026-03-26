@@ -86,18 +86,18 @@ if Code.ensure_loaded?(Plug) do
 
       @absinthe_metadata_key Metadata.conn_key()
 
-      defp absinthe_metadata(%{private: %{@absinthe_metadata_key => metadata}} = conn, include_variables) do
+      defp absinthe_metadata(%{private: %{@absinthe_metadata_key => metadata}}, include_variables) do
         [absinthe: Metadata.filter_variables(metadata, include_variables)]
       end
     end
 
-    defp absinthe_metadata(conn, _), do: []
+    defp absinthe_metadata(_conn, _), do: []
 
     defp node_metadata do
       {:ok, hostname} = :inet.gethostname()
 
       vm_pid =
-        case Integer.parse(System.get_pid()) do
+        case Integer.parse(System.pid()) do
           {pid, _units} -> pid
           _ -> nil
         end
